@@ -10,10 +10,26 @@ import {
 
 const storageKey = "rory-festival-custom-timetable";
 
+function normalizeVenue(venue: string) {
+  if (venue.includes("Rory Gallagher")) {
+    return venue;
+  }
+
+  if (venue === "Bridgend Bar" || venue === "The Bridgend Bar") {
+    return "Bridgend";
+  }
+
+  return venue
+    .replace(/^McIntyre's Saloon (Bar|Pub)$/, "McIntyre's")
+    .replace(/^Melly's (Bar|Pub)$/, "Melly's")
+    .replace(/\s+(Saloon Bar|Saloon Pub|Pub|Bar)$/, "");
+}
+
 function eventMatchesSearch(event: FestivalEvent, searchTerm: string) {
   const haystack = [
     event.title,
     event.venue,
+    normalizeVenue(event.venue),
     event.day,
     event.category,
     event.details,
@@ -45,16 +61,22 @@ export default function Home() {
     window.localStorage.setItem(storageKey, JSON.stringify(selectedIds));
   }, [selectedIds]);
 
-  const venues = useMemo(
-    () => Array.from(new Set(festivalEvents.map((event) => event.venue))).sort(),
+  const programmeEvents = useMemo(
+    () => festivalEvents.filter((event) => event.venue !== "Multiple venues"),
     [],
   );
 
+  const venues = useMemo(
+    () =>
+      Array.from(new Set(programmeEvents.map((event) => normalizeVenue(event.venue)))).sort(),
+    [programmeEvents],
+  );
+
   const filteredEvents = useMemo(() => {
-    return festivalEvents
+    return programmeEvents
       .filter((event) => day === "All" || event.day === day)
       .filter((event) => category === "All" || event.category === category)
-      .filter((event) => venue === "All" || event.venue === venue)
+      .filter((event) => venue === "All" || normalizeVenue(event.venue) === venue)
       .filter((event) => eventMatchesSearch(event, search))
       .sort((a, b) => {
         if (a.day !== b.day) {
@@ -63,12 +85,12 @@ export default function Home() {
 
         return a.minutes - b.minutes || a.title.localeCompare(b.title);
       });
-  }, [category, day, search, venue]);
+  }, [category, day, programmeEvents, search, venue]);
 
   const selectedEvents = useMemo(() => {
     const selectedSet = new Set(selectedIds);
 
-    return festivalEvents
+    return programmeEvents
       .filter((event) => selectedSet.has(event.id))
       .sort((a, b) => {
         if (a.day !== b.day) {
@@ -77,7 +99,7 @@ export default function Home() {
 
         return a.minutes - b.minutes || a.title.localeCompare(b.title);
       });
-  }, [selectedIds]);
+  }, [programmeEvents, selectedIds]);
 
   function toggleEvent(eventId: string) {
     setSelectedIds((current) =>
@@ -98,35 +120,28 @@ export default function Home() {
     <main className="min-h-screen bg-[#f8f3e9] text-stone-950">
       <section className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-5 py-8 sm:px-8 lg:px-10">
         <div className="rounded-[2rem] bg-stone-950 px-6 py-8 text-white shadow-2xl shadow-stone-300/70 sm:px-10 sm:py-12">
-          <p className="mb-4 text-sm font-semibold uppercase tracking-[0.35em] text-amber-300">
-            Ballyshannon, 28-31 May 2026
-          </p>
           <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
             <div>
-              <h1 className="max-w-4xl text-4xl font-black tracking-tight sm:text-6xl">
-                Rory Gallagher Festival timetable planner
+              <h1 className="text-4xl font-black tracking-tight sm:text-6xl">
+                Rory Gallagher Festival Timetable
               </h1>
-              <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-200">
-                Search the programme, filter by day, venue, or gig type, then add
-                your picks to a personal timetable that stays saved in this
-                browser.
+              <p className="mt-4 max-w-2xl text-lg leading-8 text-stone-200">
+                Search the programme, filter by day or venue, and save your own
+                custom festival plan.
               </p>
             </div>
-            <div className="grid grid-cols-3 gap-3 text-center">
+            <div className="grid grid-cols-2 gap-3 text-center">
               <div className="rounded-2xl bg-white/10 p-4">
-                <strong className="block text-3xl">{festivalEvents.length}</strong>
-                <span className="text-sm text-stone-300">listings</span>
+                <strong className="block text-3xl">{programmeEvents.length}</strong>
+                <span className="text-sm text-stone-300">shows</span>
               </div>
               <div className="rounded-2xl bg-white/10 p-4">
                 <strong className="block text-3xl">{venues.length}</strong>
                 <span className="text-sm text-stone-300">venues</span>
               </div>
-              <div className="rounded-2xl bg-white/10 p-4">
-                <strong className="block text-3xl">{selectedEvents.length}</strong>
-                <span className="text-sm text-stone-300">saved</span>
-              </div>
             </div>
           </div>
+          <p className="mt-8 text-sm text-stone-500">This is an unofficial app.</p>
         </div>
 
         <section className="grid gap-4 rounded-3xl border border-stone-200 bg-white p-4 shadow-sm md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_auto]">
@@ -197,7 +212,7 @@ export default function Home() {
               <div>
                 <h2 className="text-2xl font-black">Programme</h2>
                 <p className="text-sm text-stone-600">
-                  Showing {filteredEvents.length} of {festivalEvents.length} listings.
+                  Showing {filteredEvents.length} of {programmeEvents.length} listings.
                 </p>
               </div>
               <p className="rounded-full bg-amber-200 px-4 py-2 text-sm font-bold text-stone-900">
@@ -229,7 +244,7 @@ export default function Home() {
                         </div>
                         <h3 className="text-xl font-black">{event.title}</h3>
                         <p className="mt-1 font-semibold text-stone-700">
-                          {event.venue} - {event.date}
+                          {normalizeVenue(event.venue)} - {event.date}
                         </p>
                         {event.details ? (
                           <p className="mt-3 leading-7 text-stone-600">
@@ -295,7 +310,9 @@ export default function Home() {
                           {event.day} - {event.time}
                         </p>
                         <h3 className="mt-1 font-black">{event.title}</h3>
-                        <p className="mt-1 text-sm text-stone-600">{event.venue}</p>
+                        <p className="mt-1 text-sm text-stone-600">
+                          {normalizeVenue(event.venue)}
+                        </p>
                       </div>
                       <button
                         type="button"
