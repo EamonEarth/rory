@@ -14,6 +14,84 @@ export function sortEvents(events: FestivalEvent[]): FestivalEvent[] {
   });
 }
 
+const PERFORMER_OVERRIDES: Record<string, string[]> = {
+  "thu-1830-theatre-opening": [],
+  "thu-1900-theatre-legacy-gig": ["Taj Farrant", "Zac Schulze Gang"],
+  "fri-1200-statue-peter-price-coldshot": ["Peter Price", "Coldshot Big Band"],
+  "fri-1400-rock-hall-impact": ["Crest of a Wave"],
+  "sat-1230-theatre-symposium": [],
+  "sat-1600-mcginleys-sean-long-jam": ["Sean Long"],
+  "sun-1200-bridgend-guitar-session": ["Mark Black", "David Hawkins"],
+  "sun-1230-owen-roe-tribute": ["Aiden Pryor", "Whisky Flowers"],
+  "sun-1300-mellys-masterclass": ["Peter Price"],
+  "sun-1600-lantern-sean-long-jam": ["Sean Long"],
+  "sun-2215-bigtop-all-star": ["Rory Gallagher All-Star Band"],
+};
+
+const PERFORMER_PATTERNS: Array<[RegExp, string[]]> = [
+  [/^Aiden Pryor( & (The )?Whisk(e)?y Flowers)?$/i, ["Aiden Pryor", "Whisky Flowers"]],
+  [/^Aiden Pryor Band$/i, ["Aiden Pryor"]],
+  [/^Whisk(e)?y Flowers$/i, ["Whisky Flowers"]],
+  [/^Mark Black( & Friends| Band)?$/i, ["Mark Black"]],
+  [/^Sean Long Band( \(Cork\))?$/i, ["Sean Long"]],
+  [/^Davy K( Band| Project)?$/i, ["Davy K"]],
+  [/^Davy K - (The )?Solo Show$/i, ["Davy K"]],
+  [/^Banshee( \(Belfast\)| Band)?$/i, ["Banshee"]],
+  [/^Coldshot (Big|Blues Big) Band$/i, ["Coldshot Big Band"]],
+  [/^Peter Price.*$/i, ["Peter Price"]],
+  [/^Big Blues Jam - Sean Long.*$/i, ["Sean Long"]],
+  [/^Blues Guitar Masterclass with Peter Price$/i, ["Peter Price"]],
+  [/^Stoney & The Dogs$/i, ["Stoney & The Dogs"]],
+  [/^Johnny Gallagher.*$/i, ["Johnny Gallagher"]],
+  [/^Jack Austin Despy( Band)?$/i, ["Jack Austin Despy"]],
+  [/^Seamie O'Dowd( Band)?$/i, ["Seamie O'Dowd"]],
+  [/^Ciaran Hodgins Band.*$/i, ["Ciaran Hodgins"]],
+  [/^Pat McManus Band$/i, ["Pat McManus"]],
+  [/^Crest of [aA] Wave$/i, ["Crest of a Wave"]],
+  [/^Clara Rose( Band| Big Band)?$/i, ["Clara Rose"]],
+  [/^Sean Brennan & The Bullfrog's?$/i, ["Sean Brennan & The Bullfrogs"]],
+  [/^Barry McGivern Band$/i, ["Barry McGivern"]],
+  [/^Simone Galassi Band$/i, ["Simone Galassi"]],
+  [/^Grainne Duffy Band$/i, ["Grainne Duffy"]],
+  [/^Paul Sherry Band$/i, ["Paul Sherry"]],
+  [/^(The )?Zac Schulze Gang( Unplugged)?$/i, ["Zac Schulze Gang"]],
+  [/^Billy F\. Gibbons.*$/i, ["Billy F. Gibbons"]],
+  [/^Rory O'Dowd & Friends$/i, ["Rory O'Dowd"]],
+  [/^The Stingin' King.*$/i, ["The Stingin' Kings"]],
+  [/^Mark Black Band$/i, ["Mark Black"]],
+  [/^Stephen Brennan.*$/i, ["Stephen Brennan"]],
+];
+
+export function getPerformers(event: FestivalEvent): string[] {
+  const override = PERFORMER_OVERRIDES[event.id];
+
+  if (override !== undefined) {
+    return override;
+  }
+
+  for (const [pattern, performers] of PERFORMER_PATTERNS) {
+    if (pattern.test(event.title)) {
+      return performers;
+    }
+  }
+
+  return [event.title];
+}
+
+export function uniquePerformers(events: FestivalEvent[]): string[] {
+  const set = new Set<string>();
+
+  for (const event of events) {
+    for (const performer of getPerformers(event)) {
+      if (performer) {
+        set.add(performer);
+      }
+    }
+  }
+
+  return Array.from(set).sort((a, b) => a.localeCompare(b));
+}
+
 function normaliseText(value: string): string {
   return value
     .toLowerCase()
@@ -56,6 +134,7 @@ function eventSearchTokens(event: FestivalEvent): string {
       event.category,
       event.time,
       ...timeAliases(event.time),
+      ...getPerformers(event),
       event.details ?? "",
       event.ticketInfo ?? "",
     ].join(" "),

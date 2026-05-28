@@ -4,10 +4,12 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { festivalCategories, festivalDays } from "@/data/events";
 import {
+  getPerformers,
   matchesSearch,
   programmeEvents,
   sortEvents,
   timetableStorageKey,
+  uniquePerformers,
   uniqueVenues,
 } from "@/lib/timetable";
 
@@ -16,6 +18,7 @@ export default function Home() {
   const [day, setDay] = useState("All");
   const [category, setCategory] = useState("All");
   const [venue, setVenue] = useState("All");
+  const [performer, setPerformer] = useState("All");
   const [selectedIds, setSelectedIds] = useState<string[]>(() => {
     if (typeof window === "undefined") {
       return [];
@@ -31,16 +34,21 @@ export default function Home() {
   }, [selectedIds]);
 
   const venues = useMemo(() => uniqueVenues(programmeEvents), []);
+  const performers = useMemo(() => uniquePerformers(programmeEvents), []);
 
   const filteredEvents = useMemo(() => {
     const list = programmeEvents
       .filter((event) => day === "All" || event.day === day)
       .filter((event) => category === "All" || event.category === category)
       .filter((event) => venue === "All" || event.venue === venue)
+      .filter(
+        (event) =>
+          performer === "All" || getPerformers(event).includes(performer),
+      )
       .filter((event) => matchesSearch(event, search));
 
     return sortEvents(list);
-  }, [category, day, search, venue]);
+  }, [category, day, performer, search, venue]);
 
   const selectedEvents = useMemo(() => {
     const selectedSet = new Set(selectedIds);
@@ -61,10 +69,15 @@ export default function Home() {
     setDay("All");
     setCategory("All");
     setVenue("All");
+    setPerformer("All");
   }
 
   const filtersActive =
-    search.trim().length > 0 || day !== "All" || category !== "All" || venue !== "All";
+    search.trim().length > 0 ||
+    day !== "All" ||
+    category !== "All" ||
+    venue !== "All" ||
+    performer !== "All";
 
   return (
     <main className="min-h-screen bg-[#f8f3e9] text-stone-950">
@@ -99,7 +112,7 @@ export default function Home() {
           </Link>
         </div>
 
-        <section className="grid gap-4 rounded-3xl border border-stone-200 bg-white p-4 shadow-sm md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_auto]">
+        <section className="grid gap-4 rounded-3xl border border-stone-200 bg-white p-4 shadow-sm md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[1.3fr_1fr_1fr_1fr_1fr_auto]">
           <label className="flex flex-col gap-2 text-sm font-semibold text-stone-700">
             Search
             <input
@@ -148,6 +161,20 @@ export default function Home() {
               <option>All</option>
               {venues.map((eventVenue) => (
                 <option key={eventVenue}>{eventVenue}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-2 text-sm font-semibold text-stone-700">
+            Performer
+            <select
+              value={performer}
+              onChange={(event) => setPerformer(event.target.value)}
+              className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-base font-normal outline-none transition focus:border-amber-500 focus:bg-white"
+            >
+              <option>All</option>
+              {performers.map((eventPerformer) => (
+                <option key={eventPerformer}>{eventPerformer}</option>
               ))}
             </select>
           </label>
