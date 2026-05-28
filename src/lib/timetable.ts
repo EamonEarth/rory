@@ -25,7 +25,19 @@ const PERFORMER_OVERRIDES: Record<string, string[]> = {
   "sun-1230-owen-roe-tribute": ["Aiden Pryor", "Whisky Flowers"],
   "sun-1300-mellys-masterclass": ["Peter Price"],
   "sun-1600-lantern-sean-long-jam": ["Sean Long"],
-  "sun-2215-bigtop-all-star": ["Rory Gallagher All-Star Band"],
+  "sun-2215-bigtop-all-star": [
+    "Rory Gallagher All-Star Band",
+    "Gerry McAvoy",
+    "Brendan O'Neill",
+    "Mark Feltham",
+    "Pat McManus",
+    "Johnny Gallagher",
+    "Grainne Duffy",
+    "Riki Massini",
+    "Seamie O'Dowd",
+    "Davy Knowles",
+    "Zac Schulze Gang",
+  ],
 };
 
 const PERFORMER_PATTERNS: Array<[RegExp, string[]]> = [
