@@ -2,29 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { festivalCategories, festivalDays, type FestivalEvent } from "@/data/events";
+import { festivalCategories, festivalDays } from "@/data/events";
 import {
-  normalizeVenue,
+  matchesSearch,
   programmeEvents,
+  sortEvents,
   timetableStorageKey,
+  uniqueVenues,
 } from "@/lib/timetable";
-
-function eventMatchesSearch(event: FestivalEvent, searchTerm: string) {
-  const haystack = [
-    event.title,
-    event.venue,
-    normalizeVenue(event.venue),
-    event.day,
-    event.category,
-    event.details,
-    event.ticketInfo,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-
-  return haystack.includes(searchTerm.toLowerCase());
-}
 
 export default function Home() {
   const [search, setSearch] = useState("");
@@ -45,39 +30,22 @@ export default function Home() {
     window.localStorage.setItem(timetableStorageKey, JSON.stringify(selectedIds));
   }, [selectedIds]);
 
-  const venues = useMemo(
-    () =>
-      Array.from(new Set(programmeEvents.map((event) => normalizeVenue(event.venue)))).sort(),
-    [],
-  );
+  const venues = useMemo(() => uniqueVenues(programmeEvents), []);
 
   const filteredEvents = useMemo(() => {
-    return programmeEvents
+    const list = programmeEvents
       .filter((event) => day === "All" || event.day === day)
       .filter((event) => category === "All" || event.category === category)
-      .filter((event) => venue === "All" || normalizeVenue(event.venue) === venue)
-      .filter((event) => eventMatchesSearch(event, search))
-      .sort((a, b) => {
-        if (a.day !== b.day) {
-          return festivalDays.indexOf(a.day) - festivalDays.indexOf(b.day);
-        }
+      .filter((event) => venue === "All" || event.venue === venue)
+      .filter((event) => matchesSearch(event, search));
 
-        return a.minutes - b.minutes || a.title.localeCompare(b.title);
-      });
+    return sortEvents(list);
   }, [category, day, search, venue]);
 
   const selectedEvents = useMemo(() => {
     const selectedSet = new Set(selectedIds);
 
-    return programmeEvents
-      .filter((event) => selectedSet.has(event.id))
-      .sort((a, b) => {
-        if (a.day !== b.day) {
-          return festivalDays.indexOf(a.day) - festivalDays.indexOf(b.day);
-        }
-
-        return a.minutes - b.minutes || a.title.localeCompare(b.title);
-      });
+    return sortEvents(programmeEvents.filter((event) => selectedSet.has(event.id)));
   }, [selectedIds]);
 
   function toggleEvent(eventId: string) {
@@ -94,6 +62,9 @@ export default function Home() {
     setCategory("All");
     setVenue("All");
   }
+
+  const filtersActive =
+    search.trim().length > 0 || day !== "All" || category !== "All" || venue !== "All";
 
   return (
     <main className="min-h-screen bg-[#f8f3e9] text-stone-950">
@@ -134,7 +105,7 @@ export default function Home() {
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Band, venue, day..."
+              placeholder="Band, venue, day, time..."
               className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-base font-normal outline-none transition focus:border-amber-500 focus:bg-white"
             />
           </label>
@@ -184,7 +155,8 @@ export default function Home() {
           <button
             type="button"
             onClick={resetFilters}
-            className="self-end rounded-2xl bg-stone-950 px-5 py-3 font-semibold text-white transition hover:bg-stone-800"
+            disabled={!filtersActive}
+            className="self-end rounded-2xl bg-stone-950 px-5 py-3 font-semibold text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Reset
           </button>
@@ -201,63 +173,69 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="grid gap-4">
-              {filteredEvents.map((event) => {
-                const isSelected = selectedIds.includes(event.id);
+            {filteredEvents.length === 0 ? (
+              <div className="rounded-3xl border border-dashed border-stone-300 bg-white p-8 text-center text-stone-600">
+                No matching shows. Try a different search or reset the filters.
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {filteredEvents.map((event) => {
+                  const isSelected = selectedIds.includes(event.id);
 
-                return (
-                  <article
-                    key={event.id}
-                    className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
-                  >
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0">
-                        <div className="mb-3 flex flex-wrap gap-2">
-                          <span className="rounded-full bg-stone-950 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
-                            {event.day}
-                          </span>
-                          <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-900">
-                            {event.time}
-                          </span>
-                          <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-stone-700">
-                            {event.category}
-                          </span>
+                  return (
+                    <article
+                      key={event.id}
+                      className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+                    >
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0">
+                          <div className="mb-3 flex flex-wrap gap-2">
+                            <span className="rounded-full bg-stone-950 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
+                              {event.day}
+                            </span>
+                            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-900">
+                              {event.time}
+                            </span>
+                            <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-stone-700">
+                              {event.category}
+                            </span>
+                          </div>
+                          <h3 className="text-xl font-black">{event.title}</h3>
+                          <p className="mt-1 font-semibold text-stone-700">
+                            {event.venue} - {event.date}
+                          </p>
+                          {event.details ? (
+                            <p className="mt-3 leading-7 text-stone-600">
+                              {event.details}
+                            </p>
+                          ) : null}
+                          {event.ticketInfo ? (
+                            <p className="mt-3 text-sm font-bold text-red-700">
+                              {event.ticketInfo}
+                            </p>
+                          ) : null}
                         </div>
-                        <h3 className="text-xl font-black">{event.title}</h3>
-                        <p className="mt-1 font-semibold text-stone-700">
-                          {normalizeVenue(event.venue)} - {event.date}
-                        </p>
-                        {event.details ? (
-                          <p className="mt-3 leading-7 text-stone-600">
-                            {event.details}
-                          </p>
-                        ) : null}
-                        {event.ticketInfo ? (
-                          <p className="mt-3 text-sm font-bold text-red-700">
-                            {event.ticketInfo}
-                          </p>
-                        ) : null}
-                      </div>
 
-                      <button
-                        type="button"
-                        onClick={() => toggleEvent(event.id)}
-                        className={`shrink-0 rounded-2xl px-4 py-3 text-sm font-bold transition ${
-                          isSelected
-                            ? "bg-amber-400 text-stone-950 hover:bg-amber-300"
-                            : "bg-stone-950 text-white hover:bg-stone-800"
-                        }`}
-                      >
-                        {isSelected ? "Remove" : "Add to timetable"}
-                      </button>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
+                        <button
+                          type="button"
+                          onClick={() => toggleEvent(event.id)}
+                          className={`shrink-0 rounded-2xl px-4 py-3 text-sm font-bold transition ${
+                            isSelected
+                              ? "bg-amber-400 text-stone-950 hover:bg-amber-300"
+                              : "bg-stone-950 text-white hover:bg-stone-800"
+                          }`}
+                        >
+                          {isSelected ? "Remove" : "Add to timetable"}
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
           </section>
 
-          <aside className="h-fit rounded-3xl border border-stone-200 bg-white p-5 shadow-sm lg:sticky lg:top-6">
+          <aside className="hidden h-fit rounded-3xl border border-stone-200 bg-white p-5 shadow-sm lg:sticky lg:top-6 lg:block">
             <div className="mb-4 flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-black">My timetable</h2>
@@ -291,9 +269,7 @@ export default function Home() {
                           {event.day} - {event.time}
                         </p>
                         <h3 className="mt-1 font-black">{event.title}</h3>
-                        <p className="mt-1 text-sm text-stone-600">
-                          {normalizeVenue(event.venue)}
-                        </p>
+                        <p className="mt-1 text-sm text-stone-600">{event.venue}</p>
                       </div>
                       <button
                         type="button"

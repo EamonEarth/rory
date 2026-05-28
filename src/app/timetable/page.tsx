@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
-  normalizeVenue,
   programmeEvents,
   sortEvents,
   timetableStorageKey,
@@ -54,6 +53,15 @@ export default function TimetablePage() {
               ? `${selectedEvents.length} saved show${selectedEvents.length === 1 ? "" : "s"}`
               : "Your saved timetable is empty."}
           </p>
+          {selectedEvents.length ? (
+            <button
+              type="button"
+              onClick={() => setSelectedIds([])}
+              className="mt-6 rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-stone-200 transition hover:bg-white/15"
+            >
+              Clear timetable
+            </button>
+          ) : null}
         </div>
 
         <div className="space-y-3">
@@ -70,10 +78,15 @@ export default function TimetablePage() {
                     </p>
                     <h2 className="mt-2 text-xl font-black">{event.title}</h2>
                     <p className="mt-1 font-semibold text-stone-700">
-                      {normalizeVenue(event.venue)} - {event.date}
+                      {event.venue} - {event.date}
                     </p>
                     {event.details ? (
                       <p className="mt-3 leading-7 text-stone-600">{event.details}</p>
+                    ) : null}
+                    {event.ticketInfo ? (
+                      <p className="mt-3 text-sm font-bold text-red-700">
+                        {event.ticketInfo}
+                      </p>
                     ) : null}
                   </div>
                   <button
