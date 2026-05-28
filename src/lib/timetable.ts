@@ -35,7 +35,7 @@ const PERFORMER_OVERRIDES: Record<string, string[]> = {
     "Grainne Duffy",
     "Riki Massini",
     "Seamie O'Dowd",
-    "Davy Knowles",
+    "Davy K",
     "Zac Schulze Gang",
   ],
 };
@@ -90,6 +90,24 @@ export function getPerformers(event: FestivalEvent): string[] {
   return [event.title];
 }
 
+const PERFORMER_SEARCH_ALIASES: Record<string, string[]> = {
+  "Davy K": ["Davy Knowles"],
+};
+
+function performerSearchAliases(performers: string[]): string[] {
+  const aliases: string[] = [];
+
+  for (const performer of performers) {
+    const extra = PERFORMER_SEARCH_ALIASES[performer];
+
+    if (extra) {
+      aliases.push(...extra);
+    }
+  }
+
+  return aliases;
+}
+
 export function uniquePerformers(events: FestivalEvent[]): string[] {
   const set = new Set<string>();
 
@@ -137,6 +155,8 @@ function timeAliases(time: string): string[] {
 }
 
 function eventSearchTokens(event: FestivalEvent): string {
+  const performers = getPerformers(event);
+
   return normaliseText(
     [
       event.title,
@@ -146,7 +166,8 @@ function eventSearchTokens(event: FestivalEvent): string {
       event.category,
       event.time,
       ...timeAliases(event.time),
-      ...getPerformers(event),
+      ...performers,
+      ...performerSearchAliases(performers),
       event.details ?? "",
       event.ticketInfo ?? "",
     ].join(" "),
