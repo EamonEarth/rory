@@ -1,29 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { festivalCategories, festivalDays, type FestivalEvent } from "@/data/events";
 import {
-  festivalCategories,
-  festivalDays,
-  festivalEvents,
-  type FestivalEvent,
-} from "@/data/events";
-
-const storageKey = "rory-festival-custom-timetable";
-
-function normalizeVenue(venue: string) {
-  if (venue.includes("Rory Gallagher")) {
-    return venue;
-  }
-
-  if (venue === "Bridgend Bar" || venue === "The Bridgend Bar") {
-    return "Bridgend";
-  }
-
-  return venue
-    .replace(/^McIntyre's Saloon (Bar|Pub)$/, "McIntyre's")
-    .replace(/^Melly's (Bar|Pub)$/, "Melly's")
-    .replace(/\s+(Saloon Bar|Saloon Pub|Pub|Bar)$/, "");
-}
+  normalizeVenue,
+  programmeEvents,
+  timetableStorageKey,
+} from "@/lib/timetable";
 
 function eventMatchesSearch(event: FestivalEvent, searchTerm: string) {
   const haystack = [
@@ -52,24 +36,19 @@ export default function Home() {
       return [];
     }
 
-    const saved = window.localStorage.getItem(storageKey);
+    const saved = window.localStorage.getItem(timetableStorageKey);
 
     return saved ? (JSON.parse(saved) as string[]) : [];
   });
 
   useEffect(() => {
-    window.localStorage.setItem(storageKey, JSON.stringify(selectedIds));
+    window.localStorage.setItem(timetableStorageKey, JSON.stringify(selectedIds));
   }, [selectedIds]);
-
-  const programmeEvents = useMemo(
-    () => festivalEvents.filter((event) => event.venue !== "Multiple venues"),
-    [],
-  );
 
   const venues = useMemo(
     () =>
       Array.from(new Set(programmeEvents.map((event) => normalizeVenue(event.venue)))).sort(),
-    [programmeEvents],
+    [],
   );
 
   const filteredEvents = useMemo(() => {
@@ -85,7 +64,7 @@ export default function Home() {
 
         return a.minutes - b.minutes || a.title.localeCompare(b.title);
       });
-  }, [category, day, programmeEvents, search, venue]);
+  }, [category, day, search, venue]);
 
   const selectedEvents = useMemo(() => {
     const selectedSet = new Set(selectedIds);
@@ -99,7 +78,7 @@ export default function Home() {
 
         return a.minutes - b.minutes || a.title.localeCompare(b.title);
       });
-  }, [programmeEvents, selectedIds]);
+  }, [selectedIds]);
 
   function toggleEvent(eventId: string) {
     setSelectedIds((current) =>
@@ -126,8 +105,7 @@ export default function Home() {
                 Rory Gallagher Festival Timetable
               </h1>
               <p className="mt-4 max-w-2xl text-lg leading-8 text-stone-200">
-                Search the programme, filter by day or venue, and save your own
-                custom festival plan.
+                Search the programme and make your own timetable.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3 text-center">
@@ -142,6 +120,12 @@ export default function Home() {
             </div>
           </div>
           <p className="mt-8 text-sm text-stone-500">This is an unofficial app.</p>
+          <Link
+            href="/timetable"
+            className="mt-6 inline-flex rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-stone-200 transition hover:bg-white/15 lg:hidden"
+          >
+            View my timetable
+          </Link>
         </div>
 
         <section className="grid gap-4 rounded-3xl border border-stone-200 bg-white p-4 shadow-sm md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_auto]">
@@ -215,9 +199,6 @@ export default function Home() {
                   Showing {filteredEvents.length} of {programmeEvents.length} listings.
                 </p>
               </div>
-              <p className="rounded-full bg-amber-200 px-4 py-2 text-sm font-bold text-stone-900">
-                Open air concerts & pub gigs are free of charge
-              </p>
             </div>
 
             <div className="grid gap-4">
