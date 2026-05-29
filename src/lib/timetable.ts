@@ -35,7 +35,7 @@ const PERFORMER_OVERRIDES: Record<string, string[]> = {
     "Grainne Duffy",
     "Riki Massini",
     "Seamie O'Dowd",
-    "Davy K",
+    "Davy Knowles",
     "Zac Schulze Gang",
   ],
 };
@@ -90,24 +90,6 @@ export function getPerformers(event: FestivalEvent): string[] {
   return [event.title];
 }
 
-const PERFORMER_SEARCH_ALIASES: Record<string, string[]> = {
-  "Davy K": ["Davy Knowles"],
-};
-
-function performerSearchAliases(performers: string[]): string[] {
-  const aliases: string[] = [];
-
-  for (const performer of performers) {
-    const extra = PERFORMER_SEARCH_ALIASES[performer];
-
-    if (extra) {
-      aliases.push(...extra);
-    }
-  }
-
-  return aliases;
-}
-
 export function uniquePerformers(events: FestivalEvent[]): string[] {
   const set = new Set<string>();
 
@@ -120,6 +102,41 @@ export function uniquePerformers(events: FestivalEvent[]): string[] {
   }
 
   return Array.from(set).sort((a, b) => a.localeCompare(b));
+}
+
+const monthIndexes: Record<string, number> = {
+  January: 0,
+  February: 1,
+  March: 2,
+  April: 3,
+  May: 4,
+  June: 5,
+  July: 6,
+  August: 7,
+  September: 8,
+  October: 9,
+  November: 10,
+  December: 11,
+};
+
+export function eventStartsAt(event: FestivalEvent): Date {
+  const [day, month, year] = event.date.split(" ");
+  const hour24 = Math.floor(event.minutes / 60);
+  const minute = event.minutes % 60;
+
+  return new Date(
+    Number(year),
+    monthIndexes[month],
+    Number(day),
+    hour24,
+    minute,
+  );
+}
+
+export function isPreviousShow(event: FestivalEvent, now: Date): boolean {
+  const twoHoursInMs = 2 * 60 * 60 * 1000;
+
+  return now.getTime() - eventStartsAt(event).getTime() >= twoHoursInMs;
 }
 
 function normaliseText(value: string): string {
@@ -167,7 +184,6 @@ function eventSearchTokens(event: FestivalEvent): string {
       event.time,
       ...timeAliases(event.time),
       ...performers,
-      ...performerSearchAliases(performers),
       event.details ?? "",
       event.ticketInfo ?? "",
     ].join(" "),

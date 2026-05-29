@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { festivalCategories, festivalDays } from "@/data/events";
 import {
   getPerformers,
+  isPreviousShow,
   matchesSearch,
   programmeEvents,
   sortEvents,
@@ -13,12 +14,39 @@ import {
   uniqueVenues,
 } from "@/lib/timetable";
 
+let currentTimeSnapshot: Date | null = null;
+
+function subscribeToClock(onStoreChange: () => void) {
+  const interval = window.setInterval(() => {
+    currentTimeSnapshot = new Date();
+    onStoreChange();
+  }, 60 * 1000);
+
+  return () => window.clearInterval(interval);
+}
+
+function getCurrentTimeSnapshot() {
+  currentTimeSnapshot ??= new Date();
+
+  return currentTimeSnapshot;
+}
+
+function getServerTimeSnapshot() {
+  return null;
+}
+
 export default function Home() {
   const [search, setSearch] = useState("");
   const [day, setDay] = useState("All");
   const [category, setCategory] = useState("All");
   const [venue, setVenue] = useState("All");
   const [performer, setPerformer] = useState("All");
+  const [showPreviousShows, setShowPreviousShows] = useState(false);
+  const now = useSyncExternalStore(
+    subscribeToClock,
+    getCurrentTimeSnapshot,
+    getServerTimeSnapshot,
+  );
   const [selectedIds, setSelectedIds] = useState<string[]>(() => {
     if (typeof window === "undefined") {
       return [];
@@ -45,16 +73,28 @@ export default function Home() {
         (event) =>
           performer === "All" || getPerformers(event).includes(performer),
       )
+      .filter(
+        (event) =>
+          showPreviousShows || now === null || !isPreviousShow(event, now),
+      )
       .filter((event) => matchesSearch(event, search));
 
     return sortEvents(list);
-  }, [category, day, performer, search, venue]);
+  }, [category, day, now, performer, search, showPreviousShows, venue]);
 
   const selectedEvents = useMemo(() => {
     const selectedSet = new Set(selectedIds);
 
     return sortEvents(programmeEvents.filter((event) => selectedSet.has(event.id)));
   }, [selectedIds]);
+
+  const previousShowsCount = useMemo(() => {
+    if (now === null) {
+      return 0;
+    }
+
+    return programmeEvents.filter((event) => isPreviousShow(event, now)).length;
+  }, [now]);
 
   function toggleEvent(eventId: string) {
     setSelectedIds((current) =>
@@ -70,6 +110,21 @@ export default function Home() {
     setCategory("All");
     setVenue("All");
     setPerformer("All");
+    setShowPreviousShows(false);
+  }
+
+  function showOtherShows(eventPerformers: string[]) {
+    const [eventPerformer] = eventPerformers;
+
+    if (!eventPerformer) {
+      return;
+    }
+
+    setSearch("");
+    setDay("All");
+    setCategory("All");
+    setVenue("All");
+    setPerformer(eventPerformer);
   }
 
   const filtersActive =
@@ -77,7 +132,8 @@ export default function Home() {
     day !== "All" ||
     category !== "All" ||
     venue !== "All" ||
-    performer !== "All";
+    performer !== "All" ||
+    showPreviousShows;
 
   return (
     <main className="min-h-screen bg-[#f8f3e9] text-stone-950">
@@ -198,6 +254,15 @@ export default function Home() {
                   Showing {filteredEvents.length} of {programmeEvents.length} listings.
                 </p>
               </div>
+              {previousShowsCount > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setShowPreviousShows((current) => !current)}
+                  className="rounded-full bg-white px-4 py-2 text-xs font-bold text-stone-700 shadow-sm ring-1 ring-stone-200 transition hover:bg-stone-50"
+                >
+                  {showPreviousShows ? "Hide previous shows" : "Show previous shows"}
+                </button>
+              ) : null}
             </div>
 
             {filteredEvents.length === 0 ? (
@@ -208,6 +273,7 @@ export default function Home() {
               <div className="grid gap-4">
                 {filteredEvents.map((event) => {
                   const isSelected = selectedIds.includes(event.id);
+                  const eventPerformers = getPerformers(event);
 
                   return (
                     <article
@@ -243,17 +309,28 @@ export default function Home() {
                           ) : null}
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => toggleEvent(event.id)}
-                          className={`shrink-0 rounded-2xl px-4 py-3 text-sm font-bold transition ${
-                            isSelected
-                              ? "bg-amber-400 text-stone-950 hover:bg-amber-300"
-                              : "bg-stone-950 text-white hover:bg-stone-800"
-                          }`}
-                        >
-                          {isSelected ? "Remove" : "Add to timetable"}
-                        </button>
+                        <div className="flex shrink-0 flex-row flex-wrap gap-2 sm:max-w-36 sm:flex-col">
+                          <button
+                            type="button"
+                            onClick={() => toggleEvent(event.id)}
+                            className={`rounded-full px-3 py-2 text-xs font-bold transition ${
+                              isSelected
+                                ? "bg-amber-400 text-stone-950 hover:bg-amber-300"
+                                : "bg-stone-950 text-white hover:bg-stone-800"
+                            }`}
+                          >
+                            {isSelected ? "Remove" : "Add"}
+                          </button>
+                          {eventPerformers.length ? (
+                            <button
+                              type="button"
+                              onClick={() => showOtherShows(eventPerformers)}
+                              className="rounded-full bg-stone-100 px-3 py-2 text-xs font-bold text-stone-700 transition hover:bg-stone-200"
+                            >
+                              Show other shows
+                            </button>
+                          ) : null}
+                        </div>
                       </div>
                     </article>
                   );
