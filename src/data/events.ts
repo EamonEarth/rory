@@ -417,7 +417,7 @@ export const festivalEvents: FestivalEvent[] = [
     time: "2:00 PM",
     minutes: 14 * 60,
     title: "Lonesome Pete",
-    venue: "Lantern",
+    venue: "The Lantern Bar",
     category: "Pub Gig",
   },
   {
@@ -707,7 +707,7 @@ export const festivalEvents: FestivalEvent[] = [
     time: "10:30 PM",
     minutes: 22 * 60 + 30,
     title: "The Stonecold Hobos",
-    venue: "Lantern",
+    venue: "The Lantern Bar",
     category: "Pub Gig",
   },
   {
@@ -997,7 +997,7 @@ export const festivalEvents: FestivalEvent[] = [
     time: "4:00 PM",
     minutes: 16 * 60,
     title: "Bourbon Smoke",
-    venue: "Lantern",
+    venue: "The Lantern Bar",
     category: "Pub Gig",
   },
   {
@@ -1235,7 +1235,7 @@ export const festivalEvents: FestivalEvent[] = [
     time: "10:30 PM",
     minutes: 22 * 60 + 30,
     title: "Edged in Blue",
-    venue: "Lantern",
+    venue: "The Lantern Bar",
     category: "Pub Gig",
   },
   {
@@ -1468,7 +1468,7 @@ export const festivalEvents: FestivalEvent[] = [
     time: "4:00 PM",
     minutes: 16 * 60,
     title: "Big Blues Jam - Sean Long & Co",
-    venue: "Lantern",
+    venue: "The Lantern Bar",
     category: "Pub Gig",
   },
   {
@@ -1677,7 +1677,7 @@ export const festivalEvents: FestivalEvent[] = [
     time: "10:30 PM",
     minutes: 22 * 60 + 30,
     title: "Sean Long Band",
-    venue: "Lantern",
+    venue: "The Lantern Bar",
     category: "Pub Gig",
   },
   {
